@@ -43,10 +43,12 @@
     "build": "npm run clean && npm run docgen && tsc && rollup -c rollup.config.js",
     "clean": "rimraf ./dist",
     "watch": "tsc --watch",
+    "ios:pod:install": "cd ios && pod install --repo-update && cd ..",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
     "@capacitor/core": "^6.0.0",
     "@capacitor/docgen": "^0.2.2",
     "@capacitor/ios": "^6.0.0",
@@ -62,7 +64,8 @@
     "typescript": "~4.1.5"
   },
   "peerDependencies": {
-    "@capacitor/core": "^6.0.0"
+    "@capacitor/core": "^6.0.0",
+    "@capacitor-firebase/messaging": "^6.0.0"
   },
   "prettier": "@ionic/prettier-config",
   "swiftlint": "@ionic/swiftlint-config",
@@ -76,5 +79,8 @@
     "android": {
       "src": "android"
     }
+  },
+  "dependencies": {
+   
   }
 }
