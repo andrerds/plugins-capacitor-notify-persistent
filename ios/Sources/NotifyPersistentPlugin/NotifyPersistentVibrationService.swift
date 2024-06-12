@@ -37,13 +37,13 @@ final class NotifyPersistentVibrationService {
     
     // Iniciar reprodução do áudio silencioso
     private func startSilentAudio() {
-        if let audioPath = Bundle.main.path(forResource: "out2.caf", ofType: nil) {
+        if let audioPath = Bundle.main.path(forResource: "sound_custom.caf", ofType: nil) {
                print("SHOULD HEAR AUDIO NOW", audioPath)
                let url = URL(fileURLWithPath: audioPath)
 
                do {
                    audioPlayer = try AVAudioPlayer(contentsOf: url)
-                   audioPlayer?.numberOfLoops = 0
+                   audioPlayer?.numberOfLoops = 1
                    audioPlayer?.prepareToPlay()
                    audioPlayer?.play()
 
@@ -52,12 +52,12 @@ final class NotifyPersistentVibrationService {
                        guard let self = self else { return }
                        if let isPlaying = change.newValue, !isPlaying {
                            print("Audio stopped playing")
-                           self.stopContinuousVibration()
+                           stopContinuousVibration()
                        }
                    }
                } catch {
                    print("Couldn't load audio file")
-                   audioPlayer?.stop()
+                   stopContinuousVibration()
                }
            } else {
                print("NOT FILE AUDIO")
@@ -92,7 +92,7 @@ final class NotifyPersistentVibrationService {
     func startContinuousVibration() {
         setupAudioSession()
         startSilentAudio()
-        vibrationTimer = Timer.scheduledTimer(timeInterval: 1.5, target: self, selector: #selector(vibrate), userInfo: nil, repeats: true)
+        vibrationTimer = Timer.scheduledTimer(timeInterval: 1.3, target: self, selector: #selector(vibrate), userInfo: nil, repeats: true)
     }
     
     // Parar vibração contínua
@@ -102,6 +102,26 @@ final class NotifyPersistentVibrationService {
         vibrationTimer?.invalidate()
         vibrationTimer = nil
     }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        let idPushNotification = userInfo["idPushNotification"] as? String
+
+        print("Notification ID:", idPushNotification ?? "No ID")
+
+        switch response.actionIdentifier {
+        case "ACCEPT_ACTION":
+            NotificationCenter.default.post(name: Notification.Name("notificationButtonTapped"), object: response, userInfo: ["action": "ACCEPT", "idPushNotification": idPushNotification ?? ""])
+        case "REJECT_ACTION":
+            NotificationCenter.default.post(name: Notification.Name("notificationButtonTapped"), object: response, userInfo: ["action": "REJECT", "idPushNotification": idPushNotification ?? ""])
+        default:
+            break
+        }
+
+        completionHandler()
+    }
+
+    
 }
 
 
