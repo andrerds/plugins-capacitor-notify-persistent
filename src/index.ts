@@ -3,19 +3,19 @@ import { registerPlugin } from '@capacitor/core';
 
 import type { NotifyPersistentPlugin } from './definitions';
 
-const NotifyPersistent = registerPlugin<NotifyPersistentPlugin>('NotifyPersistent',{});
+const NotifyPersistent = registerPlugin<NotifyPersistentPlugin>('NotifyPersistent', {});
 export * from './definitions';
 export { NotifyPersistent };
 
 // Função para registrar os listeners no aplicativo Ionic
 // Função para registrar os listeners no aplicativo Ionic
 export function registerNotificationListeners() {
-  NotifyPersistent.addListener('notificationReceived', (notification) => {
+  NotifyPersistent.addListener('notificationReceivedNotifyPersistentPlugin', (notification) => {
     console.log('Notificação recebida:', notification);
     // Aqui você pode manipular a notificação conforme necessário
   });
 
-  NotifyPersistent.addListener('notificationAction', (action) => {
+  NotifyPersistent.addListener('notificationActionNotifyPersistentPlugin', (action) => {
     console.log('Ação de notificação:', action);
     // Aqui você pode manipular a ação da notificação conforme necessário
   });

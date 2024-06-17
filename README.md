@@ -17,8 +17,8 @@ npx cap sync
 * [`enablePlugin()`](#enableplugin)
 * [`disablePlugin()`](#disableplugin)
 * [`isEnabled()`](#isenabled)
-* [`addListener('notificationReceived', ...)`](#addlistenernotificationreceived-)
-* [`addListener('notificationAction', ...)`](#addlistenernotificationaction-)
+* [`addListener('notificationReceivedNotifyPersistentPlugin', ...)`](#addlistenernotificationreceivednotifypersistentplugin-)
+* [`addListener('notificationActionNotifyPersistentPlugin', ...)`](#addlistenernotificationactionnotifypersistentplugin-)
 * [Interfaces](#interfaces)
 
 </docgen-index>
@@ -76,36 +76,36 @@ Verifica se o plugin está habilitado.
 --------------------
 
 
-### addListener('notificationReceived', ...)
+### addListener('notificationReceivedNotifyPersistentPlugin', ...)
 
 ```typescript
-addListener(eventName: 'notificationReceived', listenerFunc: (notification: any) => void) => Promise<PluginListenerHandle> & PluginListenerHandle
+addListener(eventName: 'notificationReceivedNotifyPersistentPlugin', listenerFunc: (notification: any) => void) => Promise<PluginListenerHandle> & PluginListenerHandle
 ```
 
 Adiciona um listener para o evento de notificação recebida.
 
-| Param              | Type                                        | Description                                                        |
-| ------------------ | ------------------------------------------- | ------------------------------------------------------------------ |
-| **`eventName`**    | <code>'notificationReceived'</code>         | O nome do evento ('notificationReceived' ou 'notificationAction'). |
-| **`listenerFunc`** | <code>(notification: any) =&gt; void</code> | A função que será chamada quando o evento ocorrer.                 |
+| Param              | Type                                                      | Description                                                                              |
+| ------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **`eventName`**    | <code>'notificationReceivedNotifyPersistentPlugin'</code> | O nome do evento ('notificationReceivedNotifyPersistentPlugin' ou 'notificationAction'). |
+| **`listenerFunc`** | <code>(notification: any) =&gt; void</code>               | A função que será chamada quando o evento ocorrer.                                       |
 
 **Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
 
 --------------------
 
 
-### addListener('notificationAction', ...)
+### addListener('notificationActionNotifyPersistentPlugin', ...)
 
 ```typescript
-addListener(eventName: 'notificationAction', listenerFunc: (action: any) => void) => Promise<PluginListenerHandle> & PluginListenerHandle
+addListener(eventName: 'notificationActionNotifyPersistentPlugin', listenerFunc: (action: any) => void) => Promise<PluginListenerHandle> & PluginListenerHandle
 ```
 
 Adiciona um listener para o evento de ação de notificação.
 
-| Param              | Type                                  | Description                                                        |
-| ------------------ | ------------------------------------- | ------------------------------------------------------------------ |
-| **`eventName`**    | <code>'notificationAction'</code>     | O nome do evento ('notificationReceived' ou 'notificationAction'). |
-| **`listenerFunc`** | <code>(action: any) =&gt; void</code> | A função que será chamada quando o evento ocorrer.                 |
+| Param              | Type                                                    | Description                                                                            |
+| ------------------ | ------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **`eventName`**    | <code>'notificationActionNotifyPersistentPlugin'</code> | O nome do evento ('notificationActionNotifyPersistentPlugin' ou 'notificationAction'). |
+| **`listenerFunc`** | <code>(action: any) =&gt; void</code>                   | A função que será chamada quando o evento ocorrer.                                     |
 
 **Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
 

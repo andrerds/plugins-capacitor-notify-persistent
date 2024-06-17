@@ -29,17 +29,17 @@ export interface NotifyPersistentPlugin {
 
   /**
    * Adiciona um listener para o evento de notificação recebida.
-   * @param {string} eventName O nome do evento ('notificationReceived' ou 'notificationAction').
+   * @param {string} eventName O nome do evento ('notificationReceivedNotifyPersistentPlugin' ou 'notificationAction').
    * @param {(notification: any) => void} listenerFunc A função que será chamada quando o evento ocorrer.
    * @returns {Promise<PluginListenerHandle> & PluginListenerHandle} Uma promessa que resolve para PluginListenerHandle e também implementa PluginListenerHandle.
    */
-  addListener(eventName: 'notificationReceived', listenerFunc: (notification: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle;
+  addListener(eventName: 'notificationReceivedNotifyPersistentPlugin', listenerFunc: (notification: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle;
 
   /**
    * Adiciona um listener para o evento de ação de notificação.
-   * @param {string} eventName O nome do evento ('notificationReceived' ou 'notificationAction').
+   * @param {string} eventName O nome do evento ('notificationActionNotifyPersistentPlugin' ou 'notificationAction').
    * @param {(action: any) => void} listenerFunc A função que será chamada quando o evento ocorrer.
    * @returns {Promise<PluginListenerHandle> & PluginListenerHandle} Uma promessa que resolve para PluginListenerHandle e também implementa PluginListenerHandle.
    */
-  addListener(eventName: 'notificationAction', listenerFunc: (action: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle;
+  addListener(eventName: 'notificationActionNotifyPersistentPlugin', listenerFunc: (action: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle;
 }
