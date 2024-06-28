@@ -10,7 +10,7 @@ import Capacitor
 @objc(
     NotifyPersistentPlugin
 )
-public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotificationCenterDelegate {
+public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotificationCenterDelegate, MessagingDelegate {
     
     public let identifier = "NotifyPersistentPlugin"
     public let jsName = "NotifyPersistent"
@@ -42,45 +42,35 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     
     private let implementation = NotifyPersistent()
     let vibrationService = NotifyPersistentVibrationService.shared
+    
+    public let sharedUNUserNotificationCenterDelegate = SharedUNUserNotificationCenterDelegate.shared
+    
     let myPluginEnabledKey = "NotifyPersistentPluginEnabled"  // Definindo a constante para a chave de UserDefaults
     // Padrão é false
     var isEnabled: Bool = false
     
     override public func load() {
         super.load()
-        isEnabled = UserDefaults.standard.bool(
-            forKey: myPluginEnabledKey
-        )
+        isEnabled = UserDefaults.standard.bool(forKey: myPluginEnabledKey)
+        SharedUNUserNotificationCenterDelegate.shared.addDelegate(self)
+
         setActions()
-        
-        UNUserNotificationCenter.current().delegate = self
-        
+      
         // MARK:     Observers
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(
-                self.didReceiveRemoteNotification(
-                    notification:
-                )
-            ),
-            name: Notification.Name(
-                didReceiveRemoteNotificationName.self
-            ),
-            object: nil
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(self.didReceiveRemoteNotification(notification:)),
+                                               name: Notification.Name(didReceiveRemoteNotificationName.self),
+                                               object: nil
         )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(
-                self.handleNotificationAction(
-                    notification:
-                )
-            ),
-            name: Notification.Name(
-                notificationButtonTapped
-            ),
-            object: nil
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(self.handleNotificationAction(notification:)),
+                                               name: Notification.Name(notificationButtonTapped),
+                                               object: nil
         )
-        NotificationCenter.default.addObserver(self, selector: #selector(self.handleNotificationsCleared), name: Notification.Name("NotificationsCleared"), object: nil)
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(self.handleNotificationsCleared),
+                                               name: Notification.Name("NotificationsCleared"),
+                                               object: nil)
         
     }
     
@@ -146,26 +136,25 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
         )
     }
     
-    @objc private func didReceiveRemoteNotification(
-        notification: NSNotification
-    ) {
+    @objc private func didReceiveRemoteNotification(notification: NSNotification) {
         
         if let userInfo = notification.userInfo {
             // Verificar se a notificação é para remover outra notificação
-            if let type = userInfo["type"] as? String, type != "NEED_APPROVAL" || userInfo["type"] == nil,
-               let eid = userInfo["eid"] as? String {
-                removeNotificationByEid(eid)
-            } else {
-                // Criar uma notificação local
-                handleNotification(notification)
-            }
+            /*
+             if let type = userInfo["type"] as? String, type != "NEED_APPROVAL" || userInfo["type"] == nil,
+                let eid = userInfo["eid"] as? String {
+                 removeNotificationByEid(eid)
+             } else {
+                 // Criar uma notificação local
+                
+             }
+             */
+            handleNotification(notification)
         }
     }
     
     
-    @objc func handleNotificationAction(
-        notification: NSNotification
-    ) {
+    @objc func handleNotificationAction(notification: NSNotification) {
         guard let response = notification.object as? UNNotificationResponse else {
             return
         }
@@ -205,12 +194,8 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
         )
     }
     
-    @objc func handleNotification(
-        _ notification: NSNotification
-    ) {
-        let result = self.createNotificationResult(
-            notification: notification
-        )
+    @objc func handleNotification(_ notification: NSNotification) {
+        let result = self.createNotificationResult(notification: notification)
         
         guard let data = result["data"] as? [String: Any] else {
             print(
@@ -276,13 +261,10 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     }
     
     
-    public func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (
-            UNNotificationPresentationOptions
-        ) -> Void
-    ) {
+    public func userNotificationCenter(_ center: UNUserNotificationCenter, 
+                                       willPresent notification: UNNotification,
+                                       withCompletionHandler completionHandler:
+                                       @escaping (UNNotificationPresentationOptions) -> Void) {
         if #available(
             iOS 14.0,
             *
@@ -310,6 +292,7 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
+        print(response)
         vibrationService.stopContinuousVibration()
         
         var isSilentNotification = false
@@ -402,6 +385,8 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
                 break
             }
         }
+        
+        
         completionHandler()
     }
     
@@ -517,7 +502,7 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
                 // Remover notificações entregues
                 center.removeDeliveredNotifications(withIdentifiers: notificationsToRemove)
                 
-                /*
+                 
                  // toast indicando que a notificação foi removida
                  if !notificationsToRemove.isEmpty {
                      self.vibrationService.stopContinuousVibration()
@@ -526,7 +511,7 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
                      }
                  }
                  
-                 */
+                
                 
                 // Verificar se todas as notificações foram removidas
                 center.getPendingNotificationRequests { remainingPendingRequests in
