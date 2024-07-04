@@ -33,13 +33,24 @@ export interface NotifyPersistentPlugin {
    * @param {(notification: any) => void} listenerFunc A função que será chamada quando o evento ocorrer.
    * @returns {Promise<PluginListenerHandle> & PluginListenerHandle} Uma promessa que resolve para PluginListenerHandle e também implementa PluginListenerHandle.
    */
-  addListener(eventName: 'notificationReceivedNotifyPersistentPlugin', listenerFunc: (notification: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle;
+  addListener(eventName: 'notificationActionPerformed', listenerFunc: (notification: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle;
 
   /**
-   * Adiciona um listener para o evento de ação de notificação.
-   * @param {string} eventName O nome do evento ('notificationActionNotifyPersistentPlugin' ou 'notificationAction').
-   * @param {(action: any) => void} listenerFunc A função que será chamada quando o evento ocorrer.
-   * @returns {Promise<PluginListenerHandle> & PluginListenerHandle} Uma promessa que resolve para PluginListenerHandle e também implementa PluginListenerHandle.
+   * Adds a listener for the notification action event.
+   * @param {string} eventName - The name of the event ('notificationActionNotifyPersistentPlugin' or 'notificationAction').
+   * @param {(action: any) => void} listenerFunc - The function that will be called when the event occurs.
+   * @returns {Promise<PluginListenerHandle> & PluginListenerHandle} A promise that resolves to PluginListenerHandle and also implements PluginListenerHandle.
+   * @since 0.2.2
+   * @example
+   * NotifyPersistent.addListener('notificationActionNotifyPersistentPlugin', (action) => {
+   *   console.log('Notification action:', action);
+   * });
    */
   addListener(eventName: 'notificationActionNotifyPersistentPlugin', listenerFunc: (action: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle;
+
+  addListener(eventName: 'notificationReceived', listenerFunc: (action: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle;
+
+
+  removeAllListeners(): Promise<void>;
+
 }
