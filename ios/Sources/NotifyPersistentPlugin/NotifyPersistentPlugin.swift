@@ -55,7 +55,7 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     
     override public func load() {
         super.load()
-        isEnabled = checkPluginIsEnabled()
+        isEnabled = isPluginEnabled()
 
         UNUserNotificationCenter.current().delegate = self
         Messaging.messaging().delegate = self
@@ -137,7 +137,7 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     }
     
     @objc private func didReceiveRemoteNotification(notification: NSNotification) {
-        let isEnabled = checkPluginIsEnabled()
+        let isEnabled = isPluginEnabled()
         var isSilentNotification: Bool = false
         
         if let userInfo = notification.userInfo {
@@ -549,67 +549,7 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
         }
     }
     
-    
-    /*
-     public func removeNotificationByEid(_ eid: String, category: String) {
-     
-     let center = UNUserNotificationCenter.current()
-     
-     // Obter notificações pendentes
-     center.getPendingNotificationRequests { pendingRequests in
-     // Obter notificações entregues
-     center.getDeliveredNotifications { deliveredNotifications in
-     // Combinar as notificações pendentes e entregues
-     let allNotifications = pendingRequests.map { $0.content } + deliveredNotifications.map { $0.request.content }
-     
-     // Filtrar notificações com o eid correspondente
-     let notificationsToRemove = allNotifications.filter { content in
-     if let userInfo = content.userInfo as? [String: Any],
-     let notificationEid = userInfo["eid"] as? String,
-     notificationEid == eid {
-     return true
-     }
-     return false
-     }.map { content in
-     // Verificar se idPushNotification existe, se não adicionar uma string vazia
-     return (content.userInfo["idPushNotification"] as? String) ?? ""
-     }
-     
-     // Remover notificações pendentes
-     center.removePendingNotificationRequests(withIdentifiers: notificationsToRemove)
-     // Remover notificações entregues
-     center.removeDeliveredNotifications(withIdentifiers: notificationsToRemove)
-     
-     
-     // toast indicando que a notificação foi removida
-     if !notificationsToRemove.isEmpty {
-     self.vibrationService.stopContinuousVibration()
-     DispatchQueue.main.async {
-     self.showToast(message: "Notificação com eid \(eid) removida.")
-     }
-     }
-     
-     
-     // Verificar se todas as notificações da categoria específica foram removidas
-     center.getPendingNotificationRequests { remainingPendingRequests in
-     center.getDeliveredNotifications { remainingDeliveredNotifications in
-     // Filtrar notificações restantes pela categoria especificada
-     let remainingNotifications = remainingPendingRequests.map { $0.content } + remainingDeliveredNotifications.map { $0.request.content }
-     let remainingNotificationsInCategory = remainingNotifications.filter { content in
-     content.categoryIdentifier == category
-     }
-     
-     if remainingNotificationsInCategory.isEmpty {
-     NotificationCenter.default.post(name: Notification.Name("NotificationsCleared"), object: nil)
-     }
-     }
-     }
-     
-     }
-     }
-     } */
-    
-    
+      
     
     func showToast(message: String) {
         guard let rootViewController = UIApplication.shared.windows.first?.rootViewController else {
@@ -647,16 +587,12 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     @objc func disablePlugin(
         _ call: CAPPluginCall
     ) {
-        isEnabled = false
-        UserDefaults.standard.set(
-            isEnabled,
-            forKey: myPluginEnabledKey
-        )
+        setPluginEnabled(enabled: false)
         let value =  isEnabled
         call.resolve(
             [
                 "value": implementation.disablePlugin(
-                    value
+                    false
                 )
             ]
         )
@@ -665,15 +601,11 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     @objc func isEnabled(
         _ call: CAPPluginCall
     ) {
-        isEnabled = UserDefaults.standard.bool(
-            forKey: myPluginEnabledKey
-        )
-        let value = isEnabled
+        isEnabled =  self.isPluginEnabled()
+      
         call.resolve(
             [
-                "value": implementation.isEnabled(
-                    value
-                )
+                "value": implementation.isEnabled(isEnabled)
             ]
         )
     }
@@ -700,11 +632,9 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     ///
     /// - Returns: Um valor booleano que indica se o plugin está habilitado
     ///            ou não.
-    @objc public func checkPluginIsEnabled() -> Bool {
-        // Ler o valor do `UserDefaults` para a chave `myPluginEnabledKey`.
-        let isEnabled = UserDefaults.standard.bool(
-            forKey: myPluginEnabledKey
-        )
+    @objc public func isPluginEnabled() -> Bool {
+        // Ler o valor do UserDefaults para a chave myPluginEnabledKey.
+        let isEnabled = UserDefaults.standard.bool(forKey: myPluginEnabledKey)
         return isEnabled
     }
     
@@ -723,6 +653,11 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
         var result = JSObject()
         result["notification"] = notificationResult
         notifyListeners("notificationReceived", data: result, retainUntilConsumed: true)
+    }
+
+    private func setPluginEnabled(enabled: Bool) {
+        isEnabled = enabled
+        UserDefaults.standard.set(isEnabled, forKey: myPluginEnabledKey)
     }
 }
 
