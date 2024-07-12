@@ -1,4 +1,4 @@
-import type { PluginListenerHandle } from '@capacitor/core';
+import type { PermissionState, PluginListenerHandle } from '@capacitor/core';
 
 /**
  * Interface para gerenciar o plugin de notificações persistentes.
@@ -50,7 +50,82 @@ export interface NotifyPersistentPlugin {
 
   addListener(eventName: 'notificationReceived', listenerFunc: (action: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle;
 
-
+  /**
+     * Called when a new FCM token is received.
+     *
+     * Only available for Android and iOS.
+     *
+     * @since 0.2.2
+     */
+  addListener(eventName: 'tokenReceived', listenerFunc: TokenReceivedListener): Promise<PluginListenerHandle> & PluginListenerHandle;
   removeAllListeners(): Promise<void>;
 
+  /**
+      * Check permission to receive push notifications.
+      *
+      * On **Android**, this method only needs to be called on Android 13+.
+      *
+      * @since 0.2.2
+      */
+  checkPermissions(): Promise<PermissionStatus>;
+  /**
+   * Request permission to receive push notifications.
+   *
+   * On **Android**, this method only needs to be called on Android 13+.
+   *
+   * @since 0.2.2
+   */
+  requestPermissions(): Promise<PermissionStatus>;
+
+  getToken(options?: GetTokenOptions): Promise<GetTokenResult>;
+
+  /**
+     * Delete the FCM token and unregister the app to stop receiving push notifications.
+     * Can be called, for example, when a user signs out.
+     *
+     * @since 0.2.2
+     */
+  deleteToken(): Promise<void>;
+ 
+}
+export interface GetTokenOptions {
+  /**
+   * Your VAPID public key, which is required to retrieve the current registration token on the web.
+   *
+   * Only available for Web.
+   */
+  vapidKey?: string;
+  /**
+   * The service worker registration for receiving push messaging.
+   * If the registration is not provided explicitly, you need to have a `firebase-messaging-sw.js` at your root location.
+   *
+   * Only available for Web.
+   */
+  serviceWorkerRegistration?: ServiceWorkerRegistration;
+}
+
+export interface GetTokenResult {
+  /**
+   * @since 0.2.2
+   */
+  token: string;
+}
+
+export interface PermissionStatus {
+  /**
+   * @since 0.2.2
+   */
+  receive: PermissionState;
+}
+/**
+ * Callback to receive the token received event.
+ *
+ * @since 0.2.2
+ */
+export declare type TokenReceivedListener = (event: TokenReceivedEvent) => void;
+export interface TokenReceivedEvent {
+  /**
+   * @since 0.2.2
+   */
+  token: string;
 }

@@ -20,8 +20,14 @@ npx cap sync
 * [`addListener('notificationActionPerformed', ...)`](#addlistenernotificationactionperformed-)
 * [`addListener('notificationActionNotifyPersistentPlugin', ...)`](#addlistenernotificationactionnotifypersistentplugin-)
 * [`addListener('notificationReceived', ...)`](#addlistenernotificationreceived-)
+* [`addListener('tokenReceived', ...)`](#addlistenertokenreceived-)
 * [`removeAllListeners()`](#removealllisteners)
+* [`checkPermissions()`](#checkpermissions)
+* [`requestPermissions()`](#requestpermissions)
+* [`getToken(...)`](#gettoken)
+* [`deleteToken()`](#deletetoken)
 * [Interfaces](#interfaces)
+* [Type Aliases](#type-aliases)
 
 </docgen-index>
 
@@ -132,11 +138,96 @@ addListener(eventName: 'notificationReceived', listenerFunc: (action: any) => vo
 --------------------
 
 
+### addListener('tokenReceived', ...)
+
+```typescript
+addListener(eventName: 'tokenReceived', listenerFunc: TokenReceivedListener) => Promise<PluginListenerHandle> & PluginListenerHandle
+```
+
+Called when a new FCM token is received.
+
+Only available for Android and iOS.
+
+| Param              | Type                                                                    |
+| ------------------ | ----------------------------------------------------------------------- |
+| **`eventName`**    | <code>'tokenReceived'</code>                                            |
+| **`listenerFunc`** | <code><a href="#tokenreceivedlistener">TokenReceivedListener</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
+
+**Since:** 0.2.2
+
+--------------------
+
+
 ### removeAllListeners()
 
 ```typescript
 removeAllListeners() => Promise<void>
 ```
+
+--------------------
+
+
+### checkPermissions()
+
+```typescript
+checkPermissions() => Promise<PermissionStatus>
+```
+
+Check permission to receive push notifications.
+
+On **Android**, this method only needs to be called on Android 13+.
+
+**Returns:** <code>Promise&lt;<a href="#permissionstatus">PermissionStatus</a>&gt;</code>
+
+**Since:** 0.2.2
+
+--------------------
+
+
+### requestPermissions()
+
+```typescript
+requestPermissions() => Promise<PermissionStatus>
+```
+
+Request permission to receive push notifications.
+
+On **Android**, this method only needs to be called on Android 13+.
+
+**Returns:** <code>Promise&lt;<a href="#permissionstatus">PermissionStatus</a>&gt;</code>
+
+**Since:** 0.2.2
+
+--------------------
+
+
+### getToken(...)
+
+```typescript
+getToken(options?: GetTokenOptions | undefined) => Promise<GetTokenResult>
+```
+
+| Param         | Type                                                        |
+| ------------- | ----------------------------------------------------------- |
+| **`options`** | <code><a href="#gettokenoptions">GetTokenOptions</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#gettokenresult">GetTokenResult</a>&gt;</code>
+
+--------------------
+
+
+### deleteToken()
+
+```typescript
+deleteToken() => Promise<void>
+```
+
+Delete the FCM token and unregister the app to stop receiving push notifications.
+Can be called, for example, when a user signs out.
+
+**Since:** 0.2.2
 
 --------------------
 
@@ -149,5 +240,49 @@ removeAllListeners() => Promise<void>
 | Prop         | Type                                      |
 | ------------ | ----------------------------------------- |
 | **`remove`** | <code>() =&gt; Promise&lt;void&gt;</code> |
+
+
+#### TokenReceivedEvent
+
+| Prop        | Type                | Since |
+| ----------- | ------------------- | ----- |
+| **`token`** | <code>string</code> | 0.2.2 |
+
+
+#### PermissionStatus
+
+| Prop          | Type                                                        | Since |
+| ------------- | ----------------------------------------------------------- | ----- |
+| **`receive`** | <code><a href="#permissionstate">PermissionState</a></code> | 0.2.2 |
+
+
+#### GetTokenResult
+
+| Prop        | Type                | Since |
+| ----------- | ------------------- | ----- |
+| **`token`** | <code>string</code> | 0.2.2 |
+
+
+#### GetTokenOptions
+
+| Prop                            | Type                                   | Description                                                                                                                                                                                                |
+| ------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`vapidKey`**                  | <code>string</code>                    | Your VAPID public key, which is required to retrieve the current registration token on the web. Only available for Web.                                                                                    |
+| **`serviceWorkerRegistration`** | <code>ServiceWorkerRegistration</code> | The service worker registration for receiving push messaging. If the registration is not provided explicitly, you need to have a `firebase-messaging-sw.js` at your root location. Only available for Web. |
+
+
+### Type Aliases
+
+
+#### TokenReceivedListener
+
+Callback to receive the token received event.
+
+<code>(event: <a href="#tokenreceivedevent">TokenReceivedEvent</a>): void</code>
+
+
+#### PermissionState
+
+<code>'prompt' | 'prompt-with-rationale' | 'granted' | 'denied'</code>
 
 </docgen-api>
