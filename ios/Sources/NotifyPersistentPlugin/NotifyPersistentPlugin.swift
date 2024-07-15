@@ -165,23 +165,31 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     
     @objc private func didReceiveRemoteNotification(notification: NSNotification) {
         guard let userInfo = notification.userInfo else {
-                print("\(tag.self) didReceiveRemoteNotification:: No userInfo found")
-                return
+            print("\(tag.self) didReceiveRemoteNotification:: No userInfo found")
+            return
+        }
+        
+        print("\(tag.self) didReceiveRemoteNotification:: = 1", userInfo)
+        let pluginIsEnabled = isPluginEnabled()
+        
+        if let type = userInfo["type"] as? String,  userInfo["type"] == nil || type == "REMOVE_NOTIFICATION",
+           let eid = userInfo["eid"] as? String {
+            self.removeNotificationByEid(eid, category: categoryLocalNotificationName.self)
+        } else {
+            print("\(tag.self) didReceiveRemoteNotification:: = 2 processNotification and create", userInfo)
+            
+            let type = userInfo["type"] as? String
+            
+            if pluginIsEnabled && type ==  "NEED_APPROVAL" {
+                vibrationService.stopContinuousVibration()
+                vibrationService.startContinuousVibration()
             }
             
-            print("\(tag.self) didReceiveRemoteNotification:: = 1", userInfo)
-            
-            if let type = userInfo["type"] as? String, type != "NEED_APPROVAL" || userInfo["type"] == nil || type == "REMOVE_NOTIFICATION",
-               let eid = userInfo["eid"] as? String {
-                self.removeNotificationByEid(eid, category: categoryLocalNotificationName.self)
-            } else {
-                print("\(tag.self) didReceiveRemoteNotification:: = 2 processNotification and create", userInfo)
-                processNotification(notification)
-            }
+        }
         
-       
         
-//        processNotification(notification)
+        
+        processNotification(notification)
         
     }
     
@@ -222,12 +230,13 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
             dataDict["reasonText"] = userText
         }
         
-        print("\(tag.self) handleNotificationAction::notification  =  3", dataDict)
+        
         // Notifica os listeners com o dicionário completo
         notifyListeners(
             notifyListenerAction,
             data: dataDict
         )
+        print("\(tag.self) handleNotificationAction::notification  =  3", dataDict)
     }
     
     
@@ -675,7 +684,7 @@ extension NotifyPersistentPlugin: MessagingDelegate{
             completionHandler([.badge,.sound])
         }
         print("\(tag.self) handleNotificationReceived willPresent")
-        self.handleNotificationReceived(notification: notification)
+        self.handleNotificationReceived(notification: notification)  
     }
     
     
