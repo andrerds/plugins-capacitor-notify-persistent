@@ -137,24 +137,6 @@ final class NotifyPersistentVibrationService {
             }
         }
     }
-   
-     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-         let userInfo = response.notification.request.content.userInfo
-         let idPushNotification = userInfo["idPushNotification"] as? String
-
-         print("Notification ID:", idPushNotification ?? "No ID")
-
-         switch response.actionIdentifier {
-         case "ACCEPT_ACTION":
-             NotificationCenter.default.post(name: Notification.Name("notificationButtonTapped"), object: response, userInfo: ["action": "ACCEPT", "idPushNotification": idPushNotification ?? ""])
-         case "REJECT_ACTION":
-             NotificationCenter.default.post(name: Notification.Name("notificationButtonTapped"), object: response, userInfo: ["action": "REJECT", "idPushNotification": idPushNotification ?? ""])
-         default:
-             break
-         }
-
-         completionHandler()
-     }
 }
 
 

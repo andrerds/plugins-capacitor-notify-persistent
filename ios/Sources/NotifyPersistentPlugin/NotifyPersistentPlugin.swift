@@ -7,9 +7,7 @@ import Capacitor
  * here: https://capacitorjs.com/docs/plugins/ios
  */
 
-@objc(
-    NotifyPersistentPlugin
-)
+@objc(NotifyPersistentPlugin)
 public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotificationCenterDelegate {
     private var implementation: NotifyPersistent?
     
@@ -25,158 +23,72 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     private let categoryLocalNotificationName = "VISITOR_REQUEST"
     
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(
-            name: "isEnabled",
-            returnType: CAPPluginReturnPromise
-        ),
-        CAPPluginMethod(
-            name: "enablePlugin",
-            returnType: CAPPluginReturnPromise
-        ),
-        CAPPluginMethod(
-            name: "disablePlugin",
-            returnType: CAPPluginReturnPromise
-        ),
-        CAPPluginMethod(
-            name: "stopContinuousVibration",
-            returnType: CAPPluginReturnPromise
-        ),
-        CAPPluginMethod(
-            name: "removeAllListeners",
-            returnType: CAPPluginReturnPromise
-        ),
-        
-        CAPPluginMethod(
-            name: "checkPermissions",
-            returnType: CAPPluginReturnPromise
-        ),
-        
-        CAPPluginMethod(
-            name: "requestPermissions",
-            returnType: CAPPluginReturnPromise
-        ),
-        
-        CAPPluginMethod(
-            name: "getToken",
-            returnType: CAPPluginReturnPromise
-        ),
-        
-        CAPPluginMethod(
-            name: "deleteToken",
-            returnType: CAPPluginReturnPromise
-        ),
-        
+        CAPPluginMethod(name: "isEnabled", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "enablePlugin", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "disablePlugin", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stopContinuousVibration", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "removeAllListeners", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "checkPermissions", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getToken", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "deleteToken", returnType: CAPPluginReturnPromise),
     ]
     
-    
     let vibrationService = NotifyPersistentVibrationService.shared
-    
-    let myPluginEnabledKey = "NotifyPersistentPluginEnabled"  // Definindo a constante para a chave de UserDefaults
-    // Padrão é false
+    let myPluginEnabledKey = "NotifyPersistentPluginEnabled"
     var isEnabledPlugin: Bool = false
     
     override public func load() {
         implementation = NotifyPersistent(plugin: self, config: NotifyPersistentConfig())
         isEnabledPlugin = isPluginEnabled()
         
-        configureNotificationActions()
+        setupNotificationActions()
         
-        // MARK:     Observers
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(self.didReceiveRemoteNotification(notification:)),
-                                               name: Notification.Name(didReceiveRemoteNotificationName.self),
-                                               object: nil
-        )
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(self.processNotificationAction(notification:)),
-                                               name: Notification.Name(notificationButtonTapped),
-                                               object: nil
-        )
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(self.stopVibrationOnNotificationsCleared),
-                                               name: Notification.Name("NotificationsCleared"),
-                                               object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.handleRemoteNotification(notification:)), name: Notification.Name(didReceiveRemoteNotificationName.self), object: nil)
         
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(self.didRegisterForRemoteNotifications(notification:)), name: .capacitorDidRegisterForRemoteNotifications, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.handleNotificationAction(notification:)), name: Notification.Name(notificationButtonTapped), object: nil)
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(self.stopVibrationOnClear), name: Notification.Name("NotificationsCleared"), object: nil)
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(self.didRegisterForRemoteNotifications(notification:)), name: .capacitorDidRegisterForRemoteNotifications, object: nil)
         
         UIApplication.shared.registerForRemoteNotifications()
         
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
-        
     }
     
-    
-    //    MARK: DESTROY
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
     
-    
-    @objc public func configureNotificationActions(){
-        // Definir as ações e a categoria
-        let acceptActionTitle = NSLocalizedString(
-            "ACCEPT_ACTION_TITLE",
-            comment: "Title for Accept action"
-        )
-        let rejectActionTitle = NSLocalizedString(
-            "REJECT_ACTION_TITLE",
-            comment: "Title for Reject action"
-        )
+    @objc public func setupNotificationActions() {
+        let acceptActionTitle = NSLocalizedString("ACCEPT_ACTION_TITLE", comment: "Title for Accept action")
+        let rejectActionTitle = NSLocalizedString("REJECT_ACTION_TITLE", comment: "Title for Reject action")
+        let textBtnSend = NSLocalizedString("BNT_SEND",comment: "Button title for sending input")
+        let textInputPlaceholder = NSLocalizedString("INPUT_REASON_PLACEHOLDER", comment: "Placeholder for input field")
         
-        let acceptAction = UNNotificationAction(
-            identifier: "ACCEPT_ACTION",
-            title: acceptActionTitle,
-            options: [.foreground]
-        )
+        let acceptAction = UNNotificationAction(identifier: "ACCEPT_ACTION", title: acceptActionTitle, options: [.foreground])
+        let rejectAction = UNTextInputNotificationAction(identifier: "REJECT_ACTION", title: rejectActionTitle, options: [.destructive, .foreground], textInputButtonTitle: textBtnSend, textInputPlaceholder: textInputPlaceholder)
         
-        let rejectAction = UNTextInputNotificationAction(
-            identifier: "REJECT_ACTION",
-            title: rejectActionTitle,
-            options: [
-                .destructive,
-                .foreground
-            ],
-            textInputButtonTitle: NSLocalizedString(
-                "BNT_SEND",
-                comment: "Button title for sending input"
-            ),
-            textInputPlaceholder: NSLocalizedString(
-                "INPUT_REASON_PLACEHOLDER",
-                comment: "Placeholder for input field"
-            )
-            
-        )
-        
-        let category = UNNotificationCategory(
-            identifier: "VISITOR_REQUEST",
-            actions: [
-                acceptAction,
-                rejectAction
-            ],
-            intentIdentifiers: [],
-            options: []
-        )
-        UNUserNotificationCenter.current().setNotificationCategories(
-            [category]
-        )
+        let category = UNNotificationCategory(identifier: categoryLocalNotificationName, actions: [acceptAction, rejectAction], intentIdentifiers: [], options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
     
-    @objc private func didReceiveRemoteNotification(notification: NSNotification) {
+    @objc private func handleRemoteNotification(notification: NSNotification) {
         guard let userInfo = notification.userInfo else {
-            print("\(tag.self) didReceiveRemoteNotification:: No userInfo found")
+            print("\(tag) didReceiveRemoteNotification:: No userInfo found")
             return
         }
         
-        print("\(tag.self) didReceiveRemoteNotification:: = 1", userInfo)
+        print("\(tag) didReceiveRemoteNotification:: = 1", userInfo)
         let pluginIsEnabled = isPluginEnabled()
         
         if let type = userInfo["type"] as? String,  userInfo["type"] == nil || type == "REMOVE_NOTIFICATION",
            let eid = userInfo["eid"] as? String {
-            self.removeNotificationByEid(eid, category: categoryLocalNotificationName.self)
+            self.removeNotificationByEid(eid, category: categoryLocalNotificationName)
         } else {
-            print("\(tag.self) didReceiveRemoteNotification:: = 2 processNotification and create", userInfo)
+            print("\(tag) didReceiveRemoteNotification:: = 2 processNotification and create", userInfo)
             
             let type = userInfo["type"] as? String
             
@@ -184,25 +96,25 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
                 vibrationService.stopContinuousVibration()
                 vibrationService.startContinuousVibration()
             }
-            
         }
         
+        let aps = userInfo["aps"] as? [String: Any]
+        let contentAvailableLegacy = userInfo["content_available"] as? Bool ?? false
+        let contentAvailableNew = aps?["content-available"] as? Int ?? 0
+        let isSilentNotification = contentAvailableLegacy || contentAvailableNew == 1
         
-        
-        processNotification(notification)
-        
+        if isSilentNotification {
+            handleNotificationData(notification, isSilent: true)
+        } else {
+            handleNotificationData(notification, isSilent: false)
+        }
+         
     }
     
-    
-    @objc func processNotificationAction(notification: NSNotification) {
-        
-        print("\(tag.self) processNotificationAction::notification  =  1")
-        
+    @objc func handleNotificationAction(notification: NSNotification) {
         guard let response = notification.object as? UNNotificationResponse else {
             return
         }
-        
-        print("\(tag.self) processNotificationAction::notification  =  2")
         
         let actionIdentifier = response.actionIdentifier
         let userInfo = response.notification.request.content.userInfo
@@ -210,18 +122,12 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
         
         vibrationService.stopContinuousVibration()
         
-        
-        // Cria um dicionário para armazenar todos os dados
         var dataDict: [String: Any] = [
             "actionIdentifier": actionIdentifier,
-            "idPushNotification": idPushNotification ?? "",
+            "idPushNotification": idPushNotification ?? ""
         ]
         
-        // Adiciona todos os elementos do userInfo ao dataDict
-        for (
-            key,
-            value
-        ) in userInfo {
+        for (key, value) in userInfo {
             dataDict[key as! String] = value
         }
         
@@ -230,35 +136,19 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
             dataDict["reasonText"] = userText
         }
         
-        
-        // Notifica os listeners com o dicionário completo
-        notifyListeners(
-            notifyListenerAction,
-            data: dataDict
-        )
-        print("\(tag.self) handleNotificationAction::notification  =  3", dataDict)
+        notifyListeners(notifyListenerAction, data: dataDict)
     }
     
-    
-    
-    
-    @objc func processNotification(_ notification: NSNotification) {
+    @objc func handleNotificationData(_ notification: NSNotification, isSilent: Bool) {
         let result = self.createNotificationResult(notification: notification)
-        print("\(tag.self) processNotification::notification  =  1")
-
-        guard let data = result["data"] as? [String: Any] else {return }
+        guard let data = result["data"] as? [String: Any] else { return }
         
-        print("\(tag.self) processNotification::notification  =  2")
-
-        // Extrair e processar o campo alert
         var title = " "
         var body = " "
         var messageId = UUID().uuidString
    
         if let alertString = data["alert"] as? String,
-           let alertData = convertToDictionary(
-            text: alertString
-           ) {
+           let alertData = convertToDictionary(text: alertString) {
             if let alertTitle = alertData["title"] as? String {
                 title = alertTitle
             }
@@ -271,119 +161,54 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
             messageId = msgID
         }
         
+        if let isSilent = data["content_available"] {
+            
+        }
         
-        print("\(tag.self) processNotification::notification =  3")
-        
-
-        
-        triggerLocalNotification(
-            title: title,
-            body: body,
-            idPushNotification: messageId,
-            additionalData: data
-        )
-        
-
+        createLocalNotification(title: title, body: body, idPushNotification: messageId, additionalData: data, isSilent: isSilent)
     }
     
-    @objc private func stopVibrationOnNotificationsCleared() {
+    @objc private func stopVibrationOnClear() {
         vibrationService.stopContinuousVibration()
     }
    
-    private func processSilentNotification(_ response: UNNotificationResponse) {
-        print("\(tag.self) processSilentNotification::response  =  1")
-        
+    private func handleSilentNotification(_ response: UNNotificationResponse) {
         var userInfo = response.notification.request.content.userInfo
         let idPushNotification = userInfo["idPushNotification"] as? String
         
         switch response.actionIdentifier {
         case "ACCEPT_ACTION":
-            print("\(tag.self) ACCEPT_ACTION triggered")
-            NotificationCenter.default.post(
-                name: Notification.Name(
-                    notificationButtonTapped
-                ),
-                object: response,
-                userInfo:
-                    [
-                        "action": "ACCEPT",
-                        "idPushNotification": idPushNotification ?? "",
-                        "notification": response.notification
-                    ]
-            )
+            NotificationCenter.default.post(name: Notification.Name(notificationButtonTapped), object: response, userInfo: ["action": "ACCEPT", "idPushNotification": idPushNotification ?? "", "notification": response.notification])
         case "REJECT_ACTION":
-            print("\(tag.self) REJECT_ACTION triggered")
             if let textResponse = response as? UNTextInputNotificationResponse {
                 let userText = textResponse.userText
-                userInfo["reasonText"] = userText  // Adiciona o texto do usuário ao userInfo
-                NotificationCenter.default.post(
-                    name: Notification.Name(
-                        notificationButtonTapped
-                    ),
-                    object: response,
-                    userInfo: [
-                        "action": "REJECT",
-                        "idPushNotification": idPushNotification ?? "",
-                        "notification": response.notification,
-                        "reasonText": userText
-                    ]
-                )
+                userInfo["reasonText"] = userText
+                NotificationCenter.default.post(name: Notification.Name(notificationButtonTapped), object: response, userInfo: ["action": "REJECT", "idPushNotification": idPushNotification ?? "", "notification": response.notification, "reasonText": userText])
             } else {
-                print("\(tag.self) REJECT_ACTION triggered not text textResponse")
-                NotificationCenter.default.post(
-                    name: Notification.Name(
-                        notificationButtonTapped
-                    ),
-                    object: response,
-                    userInfo: [
-                        "action": "REJECT",
-                        "idPushNotification": idPushNotification ?? "",
-                        "notification": response.notification,
-                        "reasonText": ""
-                    ]
-                )
+                NotificationCenter.default.post(name: Notification.Name(notificationButtonTapped), object: response, userInfo: ["action": "REJECT", "idPushNotification": idPushNotification ?? "", "notification": response.notification, "reasonText": ""])
             }
-            
         default:
-            print("\(tag.self) Default action triggered")
-            NotificationCenter.default.post(
-                name: Notification.Name(
-                    notificationButtonTapped
-                ),
-                object: response,
-                userInfo:
-                    [
-                        "idPushNotification": idPushNotification ?? "",
-                        "notification": response.notification
-                    ]
-            )
-            break
+            NotificationCenter.default.post(name: Notification.Name(notificationButtonTapped), object: response, userInfo: ["idPushNotification": idPushNotification ?? "", "notification": response.notification])
         }
     }
     
-    
-    // Enviar notificação local
-    private func triggerLocalNotification(
-        title: String,
-        body: String,
-        idPushNotification: String,
-        additionalData: [String: Any]
-    ) {
-    
+    private func createLocalNotification(title: String, body: String, idPushNotification: String, additionalData: [String: Any], isSilent: Bool) {
         let pluginIsEnabled = isPluginEnabled()
-        
         
         if pluginIsEnabled {
             vibrationService.stopContinuousVibration()
             vibrationService.startContinuousVibration()
         }
-         
         
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        content.categoryIdentifier = "VISITOR_REQUEST"
         content.userInfo = additionalData
+        content.userInfo["idPushNotification"] = idPushNotification
+        
+        if isSilent {
+            content.categoryIdentifier = categoryLocalNotificationName
+        }
         
         if !pluginIsEnabled {
             if #available(iOS 15.2, *) {
@@ -391,81 +216,46 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
             } else {
                 content.sound = .defaultCritical
             }
-            
         }
         
         if #available(iOS 15.0, *) {
             content.interruptionLevel = .timeSensitive
         }
         
-        content.userInfo["idPushNotification"] = idPushNotification
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(identifier: idPushNotification, content: content, trigger: trigger)
         
-        
-        let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: 1,
-            repeats: false
-        )
-        let request = UNNotificationRequest(
-            identifier: idPushNotification,
-            content: content,
-            trigger: trigger
-        )
-        
-        UNUserNotificationCenter.current().add(
-            request
-        ) { error in
+        UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 self.vibrationService.stopContinuousVibration()
-                print(
-                    "Erro ao adicionar notificação: \(error)"
-                )
+                print("Erro ao adicionar notificação: \(error)")
             }
         }
     }
     
-   
     public func removeNotificationByEid(_ eid: String, category: String) {
         let center = UNUserNotificationCenter.current()
-        // Obter notificações pendentes
         center.getPendingNotificationRequests { pendingRequests in
-            // Obter notificações entregues
             center.getDeliveredNotifications { deliveredNotifications in
-                // Combinar as notificações pendentes e entregues
                 let allNotifications = pendingRequests.map { $0.content } + deliveredNotifications.map { $0.request.content }
-                
-                // Filtrar notificações com o eid correspondente
                 let notificationsToRemove = allNotifications.filter { content in
-                    if let userInfo = content.userInfo as? [String: Any],
-                       let notificationEid = userInfo["eid"] as? String,
-                       notificationEid == eid {
+                    if let userInfo = content.userInfo as? [String: Any], let notificationEid = userInfo["eid"] as? String, notificationEid == eid {
                         return true
                     }
                     return false
                 }.compactMap { content in
-                    // Verificar se idPushNotification existe
                     return content.userInfo["idPushNotification"] as? String
                 }
                 
-                // Remover notificações pendentes
                 center.removePendingNotificationRequests(withIdentifiers: notificationsToRemove)
-                // Remover notificações entregues
                 center.removeDeliveredNotifications(withIdentifiers: notificationsToRemove)
                 
-                // Toast indicando que a notificação foi removida
                 if !notificationsToRemove.isEmpty {
                     self.vibrationService.stopContinuousVibration()
-                     
-                     // DEBUG SHOW REMOVE NOTIFICATION
-//                    DispatchQueue.main.async {
-//                        self.showToast(message: "Notificação com eid \(eid) removida.")
-//                    }
-                     
                 }
                 
-                // Verificar se todas as notificações da categoria específica foram removidas
                 center.getPendingNotificationRequests { remainingPendingRequests in
                     center.getDeliveredNotifications { remainingDeliveredNotifications in
-                        // Filtrar notificações restantes pela categoria especificada
                         let remainingNotifications = remainingPendingRequests.map { $0.content } + remainingDeliveredNotifications.map { $0.request.content }
                         let remainingNotificationsInCategory = remainingNotifications.filter { content in
                             content.categoryIdentifier == category
@@ -479,8 +269,6 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
             }
         }
     }
-    
-    
     
     func showToast(message: String) {
         guard let rootViewController = UIApplication.shared.windows.first?.rootViewController else {
@@ -502,30 +290,26 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     }
     
     public func handleNotificationReceived(notification: UNNotification) {
-        print("\(tag.self) handleNotificationReceived")
         let notificationResult = self.createNotificationResult(notification: notification)
         var result = JSObject()
         result["notification"] = notificationResult
         notifyListeners("notificationReceived", data: result, retainUntilConsumed: true)
     }
     
-    public  func handleRemoteNotificationReceived(notification: NSNotification) {
-        print("\(tag.self) handleRemoteNotificationReceived")
+    public func handleRemoteNotificationReceived(notification: NSNotification) {
         let notificationResult = self.createNotificationResult(notification: notification)
         var result = JSObject()
         result["notification"] = notificationResult
         notifyListeners("notificationReceived", data: result, retainUntilConsumed: true)
     }
     
-  
-    public  func createNotificationResult(notification: NSNotification) -> JSObject {
+    public func createNotificationResult(notification: NSNotification) -> JSObject {
         var result = JSObject()
         result["data"] = JSTypes.coerceDictionaryToJSObject(notification.userInfo) ?? [:]
         return result
-        
     }
     
-    public  func createNotificationResult(notification: UNNotification) -> JSObject {
+    public func createNotificationResult(notification: UNNotification) -> JSObject {
         var result = JSObject()
         result["body"] = notification.request.content.body
         result["data"] = JSTypes.coerceDictionaryToJSObject(notification.request.content.userInfo) ?? [:]
@@ -535,74 +319,40 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
         return result
     }
     
-    private func convertToDictionary(
-        text: String
-    ) -> [String: Any]? {
-        if let data = text.data(
-            using: .utf8
-        ) {
+    private func convertToDictionary(text: String) -> [String: Any]? {
+        if let data = text.data(using: .utf8) {
             do {
-                return try JSONSerialization.jsonObject(
-                    with: data,
-                    options: []
-                ) as? [String: Any]
+                return try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
             } catch {
-                print(
-                    "Error converting string to dictionary: \(error)"
-                )
+                print("Error converting string to dictionary: \(error)")
             }
         }
         return nil
     }
     
+    // MARK: PLUGIN
     
-    //    MARK: manager plugin
     @objc func enablePlugin(_ call: CAPPluginCall) {
         setPluginEnabled(enabled: true)
-        call.resolve(
-            [
-                "value": implementation?.enablePlugin(
-                    true
-                )
-            ]
-        )
+        call.resolve(["value": implementation?.enablePlugin(true) as Any])
     }
     
     @objc func disablePlugin(_ call: CAPPluginCall) {
         setPluginEnabled(enabled: false)
-        call.resolve(
-            [
-                "value": implementation?.disablePlugin(
-                    false
-                )
-            ]
-        )
+        call.resolve(["value": implementation?.disablePlugin(false) as Any])
     }
     
     @objc func isEnabled(_ call: CAPPluginCall) {
         isEnabledPlugin = isPluginEnabled()
-        call.resolve(
-            [
-                "value": implementation?.isEnabled(isEnabledPlugin)
-            ]
-        )
+        call.resolve(["value": implementation?.isEnabled(isEnabledPlugin) as Any])
     }
     
-    @objc func stopContinuousVibration(
-        _ call: CAPPluginCall
-    ) {
+    @objc func stopContinuousVibration(_ call: CAPPluginCall) {
         self.vibrationService.stopContinuousVibration()
-        let value =  true
-        call.resolve(
-            [
-                "value": implementation?.stopContinuousVibration(
-                    value
-                )
-            ]
-        )
+        call.resolve(["value": implementation?.stopContinuousVibration(true) as Any])
     }
     
-     @objc func getToken(_ call: CAPPluginCall) {
+    @objc func getToken(_ call: CAPPluginCall) {
         implementation?.getToken(completion: { token, error in
             if let error = error {
                 CAPLog.print("[", self.tag, "] ", error)
@@ -630,7 +380,6 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
         guard let deviceToken = notification.object as? Data else {
             return
         }
-        print("\(tag.self) didRegisterForRemoteNotifications :deviceToken")
         Messaging.messaging().apnsToken = deviceToken
     }
     
@@ -645,21 +394,16 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
         })
     }
     
-    
     @objc override public func checkPermissions(_ call: CAPPluginCall) {
         implementation?.checkPermissions(completion: { permission in
-            call.resolve([
-                "receive": permission
-            ])
+            call.resolve(["receive": permission])
         })
     }
     
     @objc public func isPluginEnabled() -> Bool {
-        // Ler o valor do UserDefaults para a chave myPluginEnabledKey.
         let isEnabledPlugin = UserDefaults.standard.bool(forKey: myPluginEnabledKey)
         return isEnabledPlugin
     }
-   
     
     private func setPluginEnabled(enabled: Bool) {
         isEnabledPlugin = enabled
@@ -667,26 +411,20 @@ public class NotifyPersistentPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotifica
     }
 }
 
-extension NotifyPersistentPlugin: MessagingDelegate{
-    // Processa interação com ao touch
+extension NotifyPersistentPlugin: MessagingDelegate {
     public func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        print("\(tag.self) userNotificationCenter::didReceive  =  0")
-        vibrationService.stopContinuousVibration()
-        processSilentNotification(response)
+        handleSilentNotification(response)
         completionHandler()
-
     }
     
     public func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         if #available(iOS 14.0,*) {
-            completionHandler([.list,.banner,.sound])
+            completionHandler([.list, .banner, .sound])
         } else {
-            completionHandler([.badge,.sound])
+            completionHandler([.badge, .sound])
         }
-        print("\(tag.self) handleNotificationReceived willPresent")
-        self.handleNotificationReceived(notification: notification)  
+        self.handleNotificationReceived(notification: notification)
     }
-    
     
     public func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         self.handleTokenReceived(token: fcmToken)
