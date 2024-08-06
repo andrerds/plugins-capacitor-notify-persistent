@@ -31,6 +31,9 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.util.WebColor;
 import com.google.firebase.messaging.RemoteMessage;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Map;
 import java.util.Objects;
 
@@ -52,6 +55,7 @@ public class NotifyPersistentHelper {
             notificationResult.put("title", notification.getTitle());
             notificationResult.put("body", notification.getBody());
             notificationResult.put("clickAction", notification.getClickAction());
+            notificationResult.put("actionIdentifier",  notification.getClickAction());
             notificationResult.put("tag", notification.getTag());
 
             Uri link = notification.getLink();
@@ -81,7 +85,7 @@ public class NotifyPersistentHelper {
         notificationResult.put("id", "" + statusBarNotification.getId());
         notificationResult.put("tag", statusBarNotification.getTag());
 
-        Notification notification = statusBarNotification.getNotification();
+         Notification notification = statusBarNotification.getNotification();
         if (notification != null) {
             notificationResult.put("title", notification.extras.getCharSequence(Notification.EXTRA_TITLE));
             notificationResult.put("body", notification.extras.getCharSequence(Notification.EXTRA_TEXT));
@@ -132,9 +136,9 @@ public class NotifyPersistentHelper {
                 sound = sound.substring(0, sound.lastIndexOf('.'));
             }
             AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                .build();
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .build();
             Uri soundUri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/raw/" + sound);
             notificationChannel.setSound(soundUri, audioAttributes);
         }
@@ -155,12 +159,10 @@ public class NotifyPersistentHelper {
         channelResult.put("lightColor", String.format("#%06X", (0xFFFFFF & notificationChannel.getLightColor())));
         return channelResult;
     }
-
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public static void createLocalNotification(Context context, Map<String, String> data) {
+    public static void createLocalNotification(Context context, RemoteMessage data) {
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
                     "Silent Message Channel",
@@ -170,36 +172,53 @@ public class NotifyPersistentHelper {
             notificationManager.createNotificationChannel(channel);
         }
 
-        String title = data.getOrDefault("title", "Mensagem Silenciosa");
-        String body = data.getOrDefault("body", "Você recebeu uma mensagem silenciosa.");
+        Logger.debug(TAG + "createNotification data::", String.valueOf(data));
+        String title = data.getData().getOrDefault("title", "");
+        String body = data.getData().getOrDefault("body", "");
+        if (data.getData().containsKey("alert")) {
+            try {
+                JSONObject alert = new JSONObject(data.getData().get("alert"));
+                title = alert.optString("title", title);
+                body = alert.optString("body", body);
+            } catch (JSONException e) {
+                e.printStackTrace();
+                Logger.error(e.getMessage());
+            }
+        }
 
-        // Create notification default intent to open the MainActivity from Capacitor app when tapped.
-        Intent intent = launchIntent(context);
+        // Intent principal para abrir o aplicativo
+        Intent mainIntent = launchIntent(context);
+        assert mainIntent != null;
+        mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        mainIntent.putExtra("notificationId", (int) System.currentTimeMillis()); // Identificador único para a notificação
 
         // Intents para interações da notificação
-        Intent notificationTapIntent = new Intent(intent);
+        Intent notificationTapIntent = new Intent(mainIntent);
         notificationTapIntent.setAction("NOTIFICATION_TAPPED");
         notificationTapIntent.putExtra("stopVibrationAndSound", true);
-        notificationTapIntent.putExtra("act", "NOTIFICATION_TAPPED");
-        for (Map.Entry<String, String> entry : data.entrySet()) {
+        notificationTapIntent.putExtra("actionIdentifier", "NOTIFICATION_TAPPED");
+
+        for (Map.Entry<String, String> entry : data.getData().entrySet()) {
             notificationTapIntent.putExtra(entry.getKey(), entry.getValue());
         }
         PendingIntent notificationTapPendingIntent = PendingIntent.getActivity(context, 0, notificationTapIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        Intent acceptActionIntent = new Intent(intent);
+        Intent acceptActionIntent = new Intent(mainIntent);
         acceptActionIntent.setAction("ACCEPT_ACTION");
         acceptActionIntent.putExtra("stopVibrationAndSound", true);
-        acceptActionIntent.putExtra("act", "ACCEPT_ACTION");
-        for (Map.Entry<String, String> entry : data.entrySet()) {
+        acceptActionIntent.putExtra("actionIdentifier", "ACCEPT_ACTION");
+
+        for (Map.Entry<String, String> entry : data.getData().entrySet()) {
             acceptActionIntent.putExtra(entry.getKey(), entry.getValue());
         }
         PendingIntent acceptPendingIntent = PendingIntent.getActivity(context, 1, acceptActionIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        Intent rejectActionIntent = new Intent(intent);
+        Intent rejectActionIntent = new Intent(mainIntent);
         rejectActionIntent.setAction("REJECT_ACTION");
         rejectActionIntent.putExtra("stopVibrationAndSound", true);
-        rejectActionIntent.putExtra("act", "REJECT_ACTION");
-        for (Map.Entry<String, String> entry : data.entrySet()) {
+        rejectActionIntent.putExtra("actionIdentifier", "REJECT_ACTION");
+
+        for (Map.Entry<String, String> entry : data.getData().entrySet()) {
             rejectActionIntent.putExtra(entry.getKey(), entry.getValue());
         }
         PendingIntent rejectPendingIntent = PendingIntent.getActivity(context, 2, rejectActionIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -215,7 +234,7 @@ public class NotifyPersistentHelper {
                 .addAction(0, "Aceitar", acceptPendingIntent)
                 .addAction(0, "Rejeitar", rejectPendingIntent);
 
-        notificationManager.notify(0, notificationBuilder.build());
+        notificationManager.notify((int) System.currentTimeMillis(), notificationBuilder.build());
 
         // Adicionar logs para depuração
         Log.d("NotifyPersistentHelper", "createLocalNotification: Notificação criada");
@@ -226,8 +245,9 @@ public class NotifyPersistentHelper {
         Log.d("NotifyPersistentHelper", "createLocalNotification: Reject action intent - " + rejectActionIntent);
     }
 
+
+
     private static Intent launchIntent(Context context) {
-        //package br.com.keyaccess.keyaccesspass;
         try {
             Intent launchIntent =
                     context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
@@ -236,11 +256,100 @@ public class NotifyPersistentHelper {
 
                 return launchIntent;
             }
-
         } catch (Exception e) {
             e.printStackTrace();
+            Logger.debug(TAG + e.getLocalizedMessage());
         }
         return null;
     }
-
 }
+
+
+/*
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public static void createLocalNotification(Context context, RemoteMessage data) {
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Silent Message Channel",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Canal para mensagens silenciosas");
+            notificationManager.createNotificationChannel(channel);
+        }
+
+
+        Logger.debug(TAG + "createNotification data::", String.valueOf(data));
+        String title = data.getData().getOrDefault("title", "");
+        String body = data.getData().getOrDefault("body", "");
+        if (data.getData().containsKey("alert")) {
+            try {
+                JSONObject alert = new JSONObject(data.getData().get("alert"));
+                title = alert.optString("title", title);
+                body = alert.optString("body", body);
+            } catch (JSONException e) {
+                e.printStackTrace();
+                Logger.error(e.getMessage());
+            }
+        }
+
+        // Create notification default intent to open the MainActivity from Capacitor app when tapped.
+        Intent intent = launchIntent(context);
+        int notificationId = (int) System.currentTimeMillis(); // Gerar um identificador único para a notificação
+        // Intents para interações da notificação
+        Intent notificationTapIntent = new Intent(intent);
+        notificationTapIntent.setAction("NOTIFICATION_TAPPED");
+        notificationTapIntent.putExtra("stopVibrationAndSound", true);
+        notificationTapIntent.putExtra("actionIdentifier", "NOTIFICATION_TAPPED");
+        notificationTapIntent.putExtra("notificationId", notificationId); // Adicionar o identificador da notificação
+
+        for (Map.Entry<String, String> entry : data.getData().entrySet()) {
+            notificationTapIntent.putExtra(entry.getKey(), entry.getValue());
+        }
+        PendingIntent notificationTapPendingIntent = PendingIntent.getActivity(context, 0, notificationTapIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent acceptActionIntent = new Intent(intent);
+        acceptActionIntent.setAction("ACCEPT_ACTION");
+        acceptActionIntent.putExtra("stopVibrationAndSound", true);
+        acceptActionIntent.putExtra("actionIdentifier", "ACCEPT_ACTION");
+        acceptActionIntent.putExtra("notificationId", notificationId); // Adicionar o identificador da notificação
+
+        for (Map.Entry<String, String> entry : data.getData().entrySet()) {
+            acceptActionIntent.putExtra(entry.getKey(), entry.getValue());
+        }
+        PendingIntent acceptPendingIntent = PendingIntent.getActivity(context, 1, acceptActionIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent rejectActionIntent = new Intent(intent);
+        rejectActionIntent.setAction("REJECT_ACTION");
+        rejectActionIntent.putExtra("stopVibrationAndSound", true);
+        rejectActionIntent.putExtra("actionIdentifier", "REJECT_ACTION");
+        rejectActionIntent.putExtra("notificationId", notificationId); // Adicionar o identificador da notificação
+
+        for (Map.Entry<String, String> entry : data.getData().entrySet()) {
+            rejectActionIntent.putExtra(entry.getKey(), entry.getValue());
+        }
+        PendingIntent rejectPendingIntent = PendingIntent.getActivity(context, 2, rejectActionIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        @SuppressLint("NotificationTrampoline")
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(notificationTapPendingIntent)
+                .addAction(0, "Aceitar", acceptPendingIntent)
+                .addAction(0, "Rejeitar", rejectPendingIntent);
+
+        notificationManager.notify(notificationId, notificationBuilder.build());
+
+        // Adicionar logs para depuração
+        Log.d("NotifyPersistentHelper", "createLocalNotification: Notificação criada");
+        Log.d("NotifyPersistentHelper", "createLocalNotification: Title - " + title);
+        Log.d("NotifyPersistentHelper", "createLocalNotification: Body - " + body);
+        Log.d("NotifyPersistentHelper", "createLocalNotification: Notification tap intent - " + notificationTapIntent);
+        Log.d("NotifyPersistentHelper", "createLocalNotification: Accept action intent - " + acceptActionIntent);
+        Log.d("NotifyPersistentHelper", "createLocalNotification: Reject action intent - " + rejectActionIntent);
+    }
+*/

@@ -1,7 +1,10 @@
 package com.rdisnfor.plugins.capacitornotifypersistent;
 
+import static androidx.core.content.ContextCompat.getSystemService;
+
 import android.Manifest;
 import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -32,6 +35,8 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @CapacitorPlugin(
         name = "NotifyPersistent",
@@ -43,6 +48,7 @@ public class NotifyPersistentPlugin extends Plugin {
     public static final String TOKEN_RECEIVED_EVENT = "tokenReceived";
     public static final String NOTIFICATION_RECEIVED_EVENT = "notificationReceived";
     public static final String NOTIFICATION_ACTION_PERFORMED_EVENT = "notificationActionPerformed";
+    public static final String NOTIFICATION_LOCAL_ACTION_PERFORMED_EVENT = "notificationLocalActionPerformed";
     public static final String ERROR_NOTIFICATIONS_INVALID = "The provided notifications are invalid.";
     public static final String ERROR_TOPIC_MISSING = "topic must be provided.";
     public static final String ERROR_NOTIFICATIONS_MISSING = "notifications must be provided.";
@@ -53,8 +59,9 @@ public class NotifyPersistentPlugin extends Plugin {
     public static RemoteMessage lastRemoteMessage = null;
     private NotifyPersistent implementation;
     private NotifyPersistentVibrationService vibrationService = null;
-    private static  Context staticContext;
+    private static Context staticContext;
     public static final String myPluginEnabledKey = "NotifyPersistentPluginEnabled";
+    private static NotifyPersistentPlugin instance;
 
     @Override
     public void load() {
@@ -63,7 +70,6 @@ public class NotifyPersistentPlugin extends Plugin {
         staticBridge = this.bridge;
         staticContext = getContext();
 
-        ;
         if (lastToken != null) {
             handleTokenReceived(lastToken);
             lastToken = null;
@@ -72,6 +78,11 @@ public class NotifyPersistentPlugin extends Plugin {
             handleNotificationReceived(lastRemoteMessage);
             lastRemoteMessage = null;
         }
+        instance = this;
+    }
+
+    public static NotifyPersistentPlugin getInstance() {
+        return instance;
     }
 
     @Override
@@ -81,8 +92,11 @@ public class NotifyPersistentPlugin extends Plugin {
         Bundle bundle = data.getExtras();
 
         if (bundle != null && bundle.containsKey("google.message_id")) {
-            Logger.debug(TAG + "handleOnNewIntent  Plugin", bundle.toString());
+            Logger.debug(TAG + "handleOnNewIntent  Plugin", String.valueOf(bundle));
             this.handleNotificationActionPerformed(bundle);
+            if (data.getBooleanExtra("stopVibrationAndSound", false)) {
+                NotifyPersistentVibrationService.stopContinuousVibration(true);
+            }
         }
     }
 
@@ -96,14 +110,13 @@ public class NotifyPersistentPlugin extends Plugin {
     }
 
     public static void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
-        Logger.debug(TAG, "onMessageReceived 93 plugin");
-
+        Logger.debug(TAG, "1::onMessageReceived 93 plugin");
         NotifyPersistentPlugin plugin = NotifyPersistentPlugin.getFirebaseMessagingPluginInstance();
         if (plugin != null) {
             plugin.handleNotificationReceived(remoteMessage);
         } else {
             lastRemoteMessage = remoteMessage;
-            Logger.debug(TAG + "oonMessageReceived + Plugin 103", lastRemoteMessage.getRawData().toString());
+            Logger.debug(TAG + "oonMessageReceived + Plugin 103", String.valueOf(lastRemoteMessage));
         }
     }
 
@@ -150,6 +163,7 @@ public class NotifyPersistentPlugin extends Plugin {
                         @Override
                         public void success(String token) {
                             JSObject result = new JSObject();
+                            Logger.debug(TAG, "Token " + token);
                             result.put("token", token);
                             call.resolve(result);
                         }
@@ -370,7 +384,7 @@ public class NotifyPersistentPlugin extends Plugin {
 
     @PluginMethod
     public void stopContinuousVibration(PluginCall call) {
-        boolean stop = NotifyPersistentVibrationService.stopContinuousVibration();
+        boolean stop = NotifyPersistentVibrationService.stopContinuousVibration(true);
         JSObject result = new JSObject();
         result.put("value", stop);
         call.resolve(result);
@@ -387,19 +401,55 @@ public class NotifyPersistentPlugin extends Plugin {
         notifyListeners(TOKEN_RECEIVED_EVENT, result, true);
     }
 
-    private void handleNotificationReceived(@NonNull RemoteMessage remoteMessage) {
+    public void handleNotificationReceived(@NonNull RemoteMessage remoteMessage) {
+        Logger.debug(TAG, "2::handleNotificationReceived");
         JSObject notificationResult = NotifyPersistentHelper.createNotificationResult(remoteMessage);
         JSObject result = new JSObject();
         result.put("notification", notificationResult);
         notifyListeners(NOTIFICATION_RECEIVED_EVENT, result, true);
     }
 
-    private void handleNotificationActionPerformed(@NonNull Bundle bundle) {
+    public void handleLocalNotificationReceived(RemoteMessage data) {
+        JSObject notificationResult = NotifyPersistentHelper.createNotificationResult(data);
+        JSObject result = new JSObject();
+         for (Map.Entry<String, String> entry : data.getData().entrySet()) {
+            notificationResult.put(entry.getKey(), entry.getValue());
+        }
+         result.put("notification", notificationResult);
+        notifyListeners(NOTIFICATION_RECEIVED_EVENT, result, true);
+    }
+
+    public void handleNotificationActionPerformed(@NonNull Bundle bundle) {
         JSObject notificationResult = NotifyPersistentHelper.createNotificationResult(bundle);
         JSObject result = new JSObject();
         result.put("actionId", "tap");
         result.put("notification", notificationResult);
+        Logger.debug(TAG, "handleNotificationActionPerformed::::>>" + bundle);
         notifyListeners(NOTIFICATION_ACTION_PERFORMED_EVENT, result, true);
+    }
+
+    public void handleNotificationLocalActionPerformed(@NonNull Bundle bundle) {
+        String actionIdentifier = bundle.getString("actionIdentifier");
+
+        JSObject notificationResult = new JSObject();
+        JSObject data = new JSObject();
+        for (String key : bundle.keySet()) {
+            if (key.equals("google.message_id")) {
+                notificationResult.put("id", "" + bundle.get(key).toString());
+            } else {
+                data.put(key, bundle.get(key));
+            }
+        }
+        notificationResult.put("data", data);
+
+
+        JSObject result = new JSObject();
+        result.put("actionId", Objects.requireNonNullElse(actionIdentifier, "tap"));
+        result.put("actionIdentifier",  Objects.requireNonNullElse(actionIdentifier, "tap"));
+        result.put("notification", notificationResult);
+        // Log para debug
+        notifyListeners(NOTIFICATION_LOCAL_ACTION_PERFORMED_EVENT, result, true);
+        Logger.debug(TAG, "result handleNotificationLocalActionPerformed::::>>" + result);
     }
 
     private static NotifyPersistentPlugin getFirebaseMessagingPluginInstance() {
@@ -423,11 +473,9 @@ public class NotifyPersistentPlugin extends Plugin {
         try {
             SharedPreferences sharedPreferences = staticContext.getSharedPreferences(myPluginEnabledKey, Context.MODE_PRIVATE);
             return sharedPreferences.getBoolean(myPluginEnabledKey, false);
-        } catch (Exception e){
-         Logger.debug(TAG + e.getMessage());
+        } catch (Exception e) {
+           Logger.debug(TAG + e.getMessage());
             return false;
         }
-
-
     }
 }

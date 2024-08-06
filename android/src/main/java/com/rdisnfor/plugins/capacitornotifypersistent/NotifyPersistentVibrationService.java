@@ -19,7 +19,7 @@ public class NotifyPersistentVibrationService {
     private static Runnable soundRunnable;
 
     public static void startContinuousVibration(Context context) {
-        stopContinuousVibration();
+        stopContinuousVibration(true);
 
         vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         Uri notificationUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
@@ -64,9 +64,9 @@ public class NotifyPersistentVibrationService {
     }
 
 
-    public static boolean stopContinuousVibration() {
-        boolean wasVibrating = isVibrating;
-        if (isVibrating) {
+    public static boolean stopContinuousVibration(Boolean Stop) {
+        boolean wasVibrating = Stop;
+        if (wasVibrating) {
             handler.removeCallbacks(vibrationRunnable);
             handler.removeCallbacks(soundRunnable);
             if (vibrator != null) {
@@ -82,9 +82,5 @@ public class NotifyPersistentVibrationService {
             isVibrating = false;
         }
         return wasVibrating;
-    }
-
-    public static void pauseVibrationAndSound() {
-        stopContinuousVibration();
     }
 }

@@ -10,7 +10,9 @@ export { NotifyPersistent };
 // Função para registrar os listeners no aplicativo Ionic
 export function registerNotificationListeners() {
  
-  NotifyPersistent.addListener('notificationActionNotifyPersistentPlugin', (action) => {
+  NotifyPersistent.removeAllListeners();  
+  
+  NotifyPersistent.addListener('notificationLocalActionPerformed', (action) => {
     console.log('Ação de notificação:', action);
     // Aqui você pode manipular a ação da notificação conforme necessário
   });
@@ -25,5 +27,5 @@ export function registerNotificationListeners() {
     // Aqui você pode manipular a ação da notificação conforme necessário
   });
 
-  NotifyPersistent.removeAllListeners();  
+ 
 }
