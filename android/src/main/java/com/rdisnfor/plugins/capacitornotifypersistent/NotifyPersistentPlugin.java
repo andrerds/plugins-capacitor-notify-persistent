@@ -422,7 +422,11 @@ public class NotifyPersistentPlugin extends Plugin {
     public void handleNotificationActionPerformed(@NonNull Bundle bundle) {
         JSObject notificationResult = NotifyPersistentHelper.createNotificationResult(bundle);
         JSObject result = new JSObject();
-        result.put("actionId", "tap");
+//        result.put("actionId", "tap");
+        result.put("notification", notificationResult);
+        String actionIdentifier = bundle.getString("actionIdentifier");
+        result.put("actionId", Objects.requireNonNullElse(actionIdentifier, "tap"));
+        result.put("actionIdentifier",  Objects.requireNonNullElse(actionIdentifier, "tap"));
         result.put("notification", notificationResult);
         Logger.debug(TAG, "handleNotificationActionPerformed::::>>" + bundle);
         notifyListeners(NOTIFICATION_ACTION_PERFORMED_EVENT, result, true);

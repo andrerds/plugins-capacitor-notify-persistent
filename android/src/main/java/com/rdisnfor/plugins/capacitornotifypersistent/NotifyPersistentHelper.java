@@ -189,8 +189,12 @@ public class NotifyPersistentHelper {
         // Intent principal para abrir o aplicativo
         Intent mainIntent = launchIntent(context);
         assert mainIntent != null;
+        int notificationId =  (int) System.currentTimeMillis();
+        if(!Objects.requireNonNull(data.getData().get("eid")).isEmpty()){
+            notificationId = Integer.parseInt(data.getData().get("eid"));
+        }
         mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        mainIntent.putExtra("notificationId", (int) System.currentTimeMillis()); // Identificador único para a notificação
+        mainIntent.putExtra("notificationId", notificationId); // Identificador único para a notificação
 
         // Intents para interações da notificação
         Intent notificationTapIntent = new Intent(mainIntent);
@@ -234,7 +238,7 @@ public class NotifyPersistentHelper {
                 .addAction(0, "Aceitar", acceptPendingIntent)
                 .addAction(0, "Rejeitar", rejectPendingIntent);
 
-        notificationManager.notify((int) System.currentTimeMillis(), notificationBuilder.build());
+        notificationManager.notify(notificationId, notificationBuilder.build());
 
         // Adicionar logs para depuração
         Log.d("NotifyPersistentHelper", "createLocalNotification: Notificação criada");

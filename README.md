@@ -18,7 +18,7 @@ npx cap sync
 * [`disablePlugin()`](#disableplugin)
 * [`isEnabled()`](#isenabled)
 * [`addListener('notificationActionPerformed', ...)`](#addlistenernotificationactionperformed-)
-* [`addListener('notificationActionNotifyPersistentPlugin', ...)`](#addlistenernotificationactionnotifypersistentplugin-)
+* [`addListener('notificationLocalActionPerformed', ...)`](#addlistenernotificationlocalactionperformed-)
 * [`addListener('notificationReceived', ...)`](#addlistenernotificationreceived-)
 * [`addListener('tokenReceived', ...)`](#addlistenertokenreceived-)
 * [`removeAllListeners()`](#removealllisteners)
@@ -92,28 +92,28 @@ addListener(eventName: 'notificationActionPerformed', listenerFunc: (notificatio
 
 Adiciona um listener para o evento de notificação recebida.
 
-| Param              | Type                                        | Description                                                                              |
-| ------------------ | ------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **`eventName`**    | <code>'notificationActionPerformed'</code>  | O nome do evento ('notificationReceivedNotifyPersistentPlugin' ou 'notificationAction'). |
-| **`listenerFunc`** | <code>(notification: any) =&gt; void</code> | A função que será chamada quando o evento ocorrer.                                       |
+| Param              | Type                                        | Description                                                               |
+| ------------------ | ------------------------------------------- | ------------------------------------------------------------------------- |
+| **`eventName`**    | <code>'notificationActionPerformed'</code>  | O nome do evento ('notificationActionPerformed' ou 'notificationAction'). |
+| **`listenerFunc`** | <code>(notification: any) =&gt; void</code> | A função que será chamada quando o evento ocorrer.                        |
 
 **Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
 
 --------------------
 
 
-### addListener('notificationActionNotifyPersistentPlugin', ...)
+### addListener('notificationLocalActionPerformed', ...)
 
 ```typescript
-addListener(eventName: 'notificationActionNotifyPersistentPlugin', listenerFunc: (action: any) => void) => Promise<PluginListenerHandle> & PluginListenerHandle
+addListener(eventName: 'notificationLocalActionPerformed', listenerFunc: (action: any) => void) => Promise<PluginListenerHandle> & PluginListenerHandle
 ```
 
 Adds a listener for the notification action event.
 
-| Param              | Type                                                    | Description                                                                                   |
-| ------------------ | ------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **`eventName`**    | <code>'notificationActionNotifyPersistentPlugin'</code> | - The name of the event ('notificationActionNotifyPersistentPlugin' or 'notificationAction'). |
-| **`listenerFunc`** | <code>(action: any) =&gt; void</code>                   | - The function that will be called when the event occurs.                                     |
+| Param              | Type                                            | Description                                                                           |
+| ------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **`eventName`**    | <code>'notificationLocalActionPerformed'</code> | - The name of the event ('notificationLocalActionPerformed' or 'notificationAction'). |
+| **`listenerFunc`** | <code>(action: any) =&gt; void</code>           | - The function that will be called when the event occurs.                             |
 
 **Returns:** <code>Promise&lt;<a href="#pluginlistenerhandle">PluginListenerHandle</a>&gt; & <a href="#pluginlistenerhandle">PluginListenerHandle</a></code>
 
